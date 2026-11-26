@@ -31,3 +31,18 @@ Three-node quadratic elements in r, with e0 and k as global unknowns.
 ## Results
 ![Stresses](results/stresses.png)
 ![Convergence](results/convergence.png)
+## Verification
+All 4 tests pass. With 4 elements per layer:
+
+| Quantity | Analytical | FEM |
+|---|---|---|
+| Inner radial displacement (mm) | 0.100329 | 0.100329 |
+| Outer radial displacement (mm) | 0.040036 | 0.040036 |
+| Axial strain | 1.09487e-3 | 1.09487e-3 |
+| Twist (rad/mm) | -1.7800e-7 | -1.7800e-7 |
+
+Maximum relative error falls from about 2.5e-4 (1 element per layer)
+to about 7e-8 (16 elements per layer), approaching third-order convergence.
+
+Case: inner radius 50 mm, layup [55/-55/90/55/-55] from inside out,
+5 mm per layer, 50 MPa internal pressure, closed ends.
