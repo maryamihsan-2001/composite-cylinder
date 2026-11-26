@@ -7,8 +7,8 @@ from cylinder import (CARBON_EPOXY, Material, build_layers, relative_errors,
 LAYUP = [(55, 5.0), (-55, 5.0), (90, 5.0), (0, 5.0), (30, 5.0)]
 
 
-@pytest.mark.parametrize("solver, tol", [(solve_analytical, 1e-6),
-                                         (solve_fem, 1e-2)])
+@pytest.mark.parametrize("solver, tol", [(solve_analytical, 1e-6),  # MPa
+                                         (solve_fem, 0.1)])
 def test_isotropic_matches_lame(solver, tol):
     E, nu, a, b, p = 200e3, 0.3, 50.0, 100.0, 100.0
     iso = Material(E, E, E, E / (2 * (1 + nu)), nu, nu, nu)
@@ -23,9 +23,8 @@ def test_isotropic_matches_lame(solver, tol):
         u = r * (st - nu * (sr + A)) / E
         assert sol.u(i, r) == pytest.approx(u, rel=1e-4)
         # element-interior stresses; the default FEM mesh has 8 per layer
-        np.testing.assert_allclose(sol.stress(i, r), [A, st, sr, 0],
-                                   atol=tol if solver is solve_analytical else 0.1)
-
+              np.testing.assert_allclose(sol.stress(i, r), [A, st, sr, 0],
+                                   atol=tol)
 
 def test_boundary_and_interface_conditions():
     layers = build_layers(50.0, LAYUP, CARBON_EPOXY)
