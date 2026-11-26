@@ -33,7 +33,7 @@ Three-node quadratic elements in r, with e0 and k as global unknowns.
 
 ![Convergence](convergence.png)
 ## Verification
-All 11 tests pass. With 4 elements per layer:
+All 25 tests pass. With 4 elements per layer:
 
 | Quantity | Analytical | FEM |
 |---|---|---|
@@ -93,3 +93,9 @@ illustrative values, not a matched dataset for the elastic properties.
   36 deg and above about 80 deg.
 - These are first-ply estimates, not burst pressures. Thermal stresses
   and progressive damage are ignored.
+
+  ## Rotation checks
+Ply stiffness is checked at 0 and 90 deg and against the textbook
+transformed-compliance formulas at six angles. The ply stress rotation
+is checked against a tensor rotation. These verify the transformations,
+not the material data or experimental behaviour.
