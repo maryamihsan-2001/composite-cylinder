@@ -23,8 +23,9 @@ def test_isotropic_matches_lame(solver, tol):
         u = r * (st - nu * (sr + A)) / E
         assert sol.u(i, r) == pytest.approx(u, rel=1e-4)
         # element-interior stresses; the default FEM mesh has 8 per layer
-              np.testing.assert_allclose(sol.stress(i, r), [A, st, sr, 0],
+        np.testing.assert_allclose(sol.stress(i, r), [A, st, sr, 0],
                                    atol=tol)
+
 
 def test_boundary_and_interface_conditions():
     layers = build_layers(50.0, LAYUP, CARBON_EPOXY)
