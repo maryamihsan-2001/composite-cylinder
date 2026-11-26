@@ -29,8 +29,9 @@ Three-node quadratic elements in r, with e0 and k as global unknowns.
     python main.py
 
 ## Results
-![Stresses](results/stresses.png)
-![Convergence](results/convergence.png)
+![Stresses](stresses.png)
+
+![Convergence](convergence.png)
 ## Verification
 All 4 tests pass. With 4 elements per layer:
 
