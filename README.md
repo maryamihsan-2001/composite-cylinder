@@ -33,7 +33,7 @@ Three-node quadratic elements in r, with e0 and k as global unknowns.
 
 ![Convergence](convergence.png)
 ## Verification
-All 4 tests pass. With 4 elements per layer:
+All 11 tests pass. With 4 elements per layer:
 
 | Quantity | Analytical | FEM |
 |---|---|---|
@@ -65,5 +65,31 @@ Ten alternating +a/-a layers (2.5 mm each), inner radius 50 mm,
 - **Matrix-dominated stresses:** transverse and shear stresses are both
   low (roughly 15 MPa or less) around 55 deg.
 
-No single angle is best for every measure. A strength-based choice needs
-a failure criterion, which is not included.
+No single angle is best for every measure. See the failure study below for a strength comparison.
+## Failure study
+First-ply failure pressure for the ten-layer +a/-a cylinder.
+Run with `python failure_study.py`.
+
+Assumed strengths (MPa): XT = XC = 1500, YT = 40, YC = 246, S12 = 68.
+Radial strengths are taken equal to transverse strengths. These are
+illustrative values, not a matched dataset for the elastic properties.
+
+![Failure study](failure_study.png)
+
+| Angle (deg) | Tsai-Wu (MPa) | Max stress (MPa) | Max stress mode |
+|---|---|---|---|
+| 0 | 18.8 | 15.4 | matrix tension |
+| 30 | 34.2 | 31.5 | matrix tension |
+| 45 | 110.7 | 91.1 | shear |
+| 55 | 205.9 | 246.0 | radial compression |
+| 75 | 55.0 | 55.6 | matrix tension |
+| 90 | 45.1 | 44.9 | matrix tension |
+
+- Tsai-Wu peaks at 209 MPa at 57 deg; maximum stress reaches 246 MPa
+  around 54-56 deg, limited by the assumed radial compressive strength.
+- The critical location moves from the inner layer at 55 deg and below
+  (tabulated angles) to the outer layer at 60 deg and above.
+- At 50 MPa, Tsai-Wu predicts first-ply failure for angles below about
+  36 deg and above about 80 deg.
+- These are first-ply estimates, not burst pressures. Thermal stresses
+  and progressive damage are ignored.
