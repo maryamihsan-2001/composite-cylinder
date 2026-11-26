@@ -63,7 +63,7 @@ Ten alternating +a/-a layers (2.5 mm each), inner radius 50 mm,
 - **Hoop stress:** peak rises from 130 MPa at 0 deg to about 241 MPa at
   90 deg, with more load concentrated near the inner surface.
 - **Matrix-dominated stresses:** transverse and shear stresses are both
-  low (roughly 10 MPa or less) around 55 deg.
+  low (roughly 15 MPa or less) around 55 deg.
 
 No single angle is best for every measure. A strength-based choice needs
 a failure criterion, which is not included.
