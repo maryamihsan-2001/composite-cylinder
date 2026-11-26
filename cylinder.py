@@ -1,10 +1,10 @@
-"""Layered composite thick cylinder under internal/external pressure.
+"""Layered composite thick cylinder: pressure and uniform temperature change.
 
 Axisymmetric, generalised plane strain with twist, closed ends.
 Vector order: [z (axial), theta (hoop), r (radial), theta-z (shear)].
-Units: mm, N, MPa.
+Units: mm, N, MPa, K.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable
 
 import numpy as np
@@ -21,10 +21,14 @@ class Material:
     nu12: float
     nu13: float
     nu23: float
+    alpha1: float = 0.0  # thermal expansion coefficients [1/K]
+    alpha2: float = 0.0
+    alpha3: float = 0.0
 
 
 CARBON_EPOXY = Material(E1=135e3, E2=10e3, E3=10e3, G12=5e3,
-                        nu12=0.27, nu13=0.27, nu23=0.45)
+                        nu12=0.27, nu13=0.27, nu23=0.45,
+                        alpha1=-0.5e-6, alpha2=27e-6, alpha3=27e-6)
 
 
 @dataclass(frozen=True)
@@ -32,6 +36,7 @@ class Layer:
     r_in: float
     r_out: float
     C: np.ndarray  # 4x4 stiffness in cylinder axes
+    alpha: np.ndarray = field(default_factory=lambda: np.zeros(4))
 
 
 @dataclass
@@ -40,6 +45,7 @@ class Solution:
     eps0: float    # axial strain
     kappa: float   # twist per unit length (rad/mm)
     kinematics: Callable  # (layer index, r) -> (u, du/dr)
+    dT: float = 0.0
 
     def u(self, i, r):
         return self.kinematics(i, r)[0]
@@ -47,7 +53,8 @@ class Solution:
     def stress(self, i, r):
         u, du = self.kinematics(i, r)
         strain = np.array([self.eps0, u / r, du, self.kappa * r])
-        return self.layers[i].C @ strain
+        layer = self.layers[i]
+        return layer.C @ (strain - self.dT * layer.alpha)
 
 
 def ply_stiffness(mat, angle_deg):
@@ -72,11 +79,23 @@ def ply_stiffness(mat, angle_deg):
     return T.T @ C @ T
 
 
+def ply_expansion(mat, angle_deg):
+    """Thermal expansion coefficients in cylinder axes."""
+    c, s = np.cos(np.radians(angle_deg)), np.sin(np.radians(angle_deg))
+    return np.array([
+        c * c * mat.alpha1 + s * s * mat.alpha2,
+        s * s * mat.alpha1 + c * c * mat.alpha2,
+        mat.alpha3,
+        2 * c * s * (mat.alpha1 - mat.alpha2),
+    ])
+
+
 def build_layers(r_inner, layup, mat):
     """layup: list of (angle_deg, thickness), ordered inside to outside."""
     layers, r = [], r_inner
     for angle, thickness in layup:
-        layers.append(Layer(r, r + thickness, ply_stiffness(mat, angle)))
+        layers.append(Layer(r, r + thickness, ply_stiffness(mat, angle),
+                            ply_expansion(mat, angle)))
         r += thickness
     return layers
 
@@ -100,6 +119,15 @@ def _solve_scaled(A, b):
 
 
 # ---------------------------------------------------------------- analytical
+def _particular(k, lam, r, r_ref):
+    """Particular solution of u'' + u'/r - lam^2 u/r^2 = k/r."""
+    if abs(lam - 1) < TOL:
+        log = np.log(r / r_ref)
+        return k / 2 * r * log, k / 2 * (log + 1)
+    a = k / (1 - lam**2)
+    return a * r, a
+
+
 def _basis(layer, r):
     """u and du/dr as linear functions of [c1, c2, eps0, kappa]."""
     C = layer.C
@@ -108,12 +136,7 @@ def _basis(layer, r):
     f2 = (r / layer.r_in) ** (-lam)
     log = np.log(r / layer.r_in)
 
-    k = (C[0, 1] - C[0, 2]) / C[2, 2]            # axial strain forcing
-    if abs(lam - 1) < TOL:
-        g, dg = k / 2 * r * log, k / 2 * (log + 1)
-    else:
-        a = k / (1 - lam**2)
-        g, dg = a * r, a
+    g, dg = _particular((C[0, 1] - C[0, 2]) / C[2, 2], lam, r, layer.r_in)
 
     k = (C[1, 3] - 2 * C[2, 3]) / C[2, 2]        # twist forcing
     if abs(lam - 2) < TOL:
@@ -127,7 +150,16 @@ def _basis(layer, r):
     return u, du
 
 
-def solve_analytical(layers, p_in, p_out=0.0):
+def _thermal_basis(layer, r, dT):
+    """Particular u and du/dr caused by a uniform temperature change."""
+    C = layer.C
+    beta = C @ layer.alpha * dT
+    lam = np.sqrt(C[1, 1] / C[2, 2])
+    k = (beta[2] - beta[1]) / C[2, 2]
+    return _particular(k, lam, r, layer.r_in)
+
+
+def solve_analytical(layers, p_in, p_out=0.0, dT=0.0):
     n = len(layers)
     A = np.zeros((2 * n + 2, 2 * n + 2))
     b = np.zeros(2 * n + 2)
@@ -136,40 +168,51 @@ def solve_analytical(layers, p_in, p_out=0.0):
         return [2 * i, 2 * i + 1, 2 * n, 2 * n + 1]
 
     def evaluate(i, r):
-        u, du = _basis(layers[i], r)
+        layer = layers[i]
+        u, du = _basis(layer, r)
+        u0, du0 = _thermal_basis(layer, r, dT)
         strain = np.array([[0, 0, 1, 0], u / r, du, [0, 0, 0, r]], dtype=float)
-        return u, layers[i].C @ strain
+        S = layer.C @ strain
+        S0 = layer.C @ (np.array([0, u0 / r, du0, 0]) - dT * layer.alpha)
+        return u, S, u0, S0
 
     # radial stress on the inner and outer surfaces
-    A[0, dofs(0)] = evaluate(0, layers[0].r_in)[1][2]
-    A[1, dofs(n - 1)] = evaluate(n - 1, layers[-1].r_out)[1][2]
-    b[0], b[1] = -p_in, -p_out
+    surfaces = [(0, layers[0].r_in, p_in), (n - 1, layers[-1].r_out, p_out)]
+    for row, (i, r, p) in enumerate(surfaces):
+        _, S, _, S0 = evaluate(i, r)
+        A[row, dofs(i)] = S[2]
+        b[row] = -p - S0[2]
 
     # continuity of u and radial stress at each interface
     eq = 2
     for i in range(n - 1):
         r = layers[i].r_out
         for j, sign in ((i, 1), (i + 1, -1)):
-            u, S = evaluate(j, r)
+            u, S, u0, S0 = evaluate(j, r)
             A[eq, dofs(j)] += sign * u
             A[eq + 1, dofs(j)] += sign * S[2]
+            b[eq] -= sign * u0
+            b[eq + 1] -= sign * S0[2]
         eq += 2
 
     # axial force and zero torque
+    b[eq] = axial_force(layers, p_in, p_out)
     for j, layer in enumerate(layers):
         for r, w in zip(*_gauss(layer.r_in, layer.r_out, 20)):
-            S = evaluate(j, r)[1]
+            _, S, _, S0 = evaluate(j, r)
             A[eq, dofs(j)] += 2 * np.pi * r * w * S[0]
             A[eq + 1, dofs(j)] += 2 * np.pi * r**2 * w * S[3]
-    b[eq] = axial_force(layers, p_in, p_out)
+            b[eq] -= 2 * np.pi * r * w * S0[0]
+            b[eq + 1] -= 2 * np.pi * r**2 * w * S0[3]
 
     x = _solve_scaled(A, b)
 
     def kinematics(i, r):
         u, du = _basis(layers[i], r)
-        return u @ x[dofs(i)], du @ x[dofs(i)]
+        u0, du0 = _thermal_basis(layers[i], r, dT)
+        return u @ x[dofs(i)] + u0, du @ x[dofs(i)] + du0
 
-    return Solution(layers, x[-2], x[-1], kinematics)
+    return Solution(layers, x[-2], x[-1], kinematics, dT)
 
 
 # ---------------------------------------------------------------- FEM
@@ -181,7 +224,7 @@ def _shape(r1, r2, r):
     return N, dN
 
 
-def solve_fem(layers, p_in, p_out=0.0, elems_per_layer=8):
+def solve_fem(layers, p_in, p_out=0.0, elems_per_layer=8, dT=0.0):
     m = elems_per_layer
     n_u = 2 * len(layers) * m + 1
     K = np.zeros((n_u + 2, n_u + 2))   # nodal u, then eps0 and kappa
@@ -199,11 +242,13 @@ def solve_fem(layers, p_in, p_out=0.0, elems_per_layer=8):
                 B[1, :3] = N / r
                 B[2, :3] = dN
                 B[3, 4] = r
-                K[np.ix_(dofs, dofs)] += 2 * np.pi * r * w * B.T @ layer.C @ B
+                dV = 2 * np.pi * r * w
+                K[np.ix_(dofs, dofs)] += dV * B.T @ layer.C @ B
+                F[dofs] += dV * B.T @ (layer.C @ layer.alpha * dT)
 
-    F[0] = 2 * np.pi * layers[0].r_in * p_in
-    F[n_u - 1] = -2 * np.pi * layers[-1].r_out * p_out
-    F[n_u] = axial_force(layers, p_in, p_out)
+    F[0] += 2 * np.pi * layers[0].r_in * p_in
+    F[n_u - 1] -= 2 * np.pi * layers[-1].r_out * p_out
+    F[n_u] += axial_force(layers, p_in, p_out)
 
     x = _solve_scaled(K, F)
 
@@ -215,7 +260,7 @@ def solve_fem(layers, p_in, p_out=0.0, elems_per_layer=8):
         ue = x[2 * e:2 * e + 3]
         return N @ ue, dN @ ue
 
-    return Solution(layers, x[-2], x[-1], kinematics)
+    return Solution(layers, x[-2], x[-1], kinematics, dT)
 
 
 # ---------------------------------------------------------------- comparison
