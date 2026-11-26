@@ -9,6 +9,26 @@ An analytical solution is compared with a 1D finite element model.
 - Ply angle measured from the cylinder axis (90 deg = hoop)
 - Away from end effects; no thermal loads or failure prediction
 
+  ## Material properties
+Illustrative carbon/epoxy values, not test data for a specific product.
+Direction 1 is along the fibre, 2 is in-plane transverse, 3 is radial.
+
+| Property | Value |
+|---|---|
+| E1 | 135 GPa |
+| E2 = E3 | 10 GPa |
+| G12 | 5 GPa |
+| nu12 = nu13 | 0.27 |
+| nu23 | 0.45 |
+| XT = XC | 1500 MPa |
+| YT | 40 MPa |
+| YC | 246 MPa |
+| S12 | 68 MPa |
+
+G13 and G23 are not needed because the related shear strains are zero.
+For Tsai-Wu, F12 = F13 = -0.5 sqrt(F11 F22), F23 = -0.5 F22,
+F33 = F22. These interaction terms are assumptions.
+
 ## Analytical solution
 In each layer, radial equilibrium gives
 
@@ -50,6 +70,14 @@ Case: inner radius 50 mm, layup [55/-55/90/55/-55] from inside out,
 ## Winding angle study
 Ten alternating +a/-a layers (2.5 mm each), inner radius 50 mm,
 50 MPa internal pressure, closed ends. Angle measured from the axis.
+
+## Discussion of the baseline results
+- **Radial stress** goes from -50 MPa at the inner surface to zero at
+  the outer surface and is continuous across interfaces.
+- **Other stresses** can jump between layers as the ply angle, and
+  therefore the stiffness, changes.
+- **Convergence:** the error ratio for each mesh refinement rises from
+  about 7.2 to 7.9, approaching the factor of 8 for third order.
 
 ![Winding angle study](angle_study.png)
 
@@ -99,3 +127,14 @@ Ply stiffness is checked at 0 and 90 deg and against the textbook
 transformed-compliance formulas at six angles. The ply stress rotation
 is checked against a tensor rotation. These verify the transformations,
 not the material data or experimental behaviour.
+
+## References and further reading
+1. Lekhnitskii, S. G. (1981). Theory of Elasticity of an Anisotropic
+   Body. Mir Publishers, Moscow.
+2. Xia, M., Takayanagi, H. and Kemmochi, K. (2001). Analysis of
+   multi-layered filament-wound composite pipes under internal pressure.
+   Composite Structures, 53(4), 483-491.
+3. Tsai, S. W. and Wu, E. M. (1971). A general theory of strength for
+   anisotropic materials. Journal of Composite Materials, 5(1), 58-80.
+4. Jones, R. M. (1999). Mechanics of Composite Materials, 2nd ed.
+   Taylor & Francis.
