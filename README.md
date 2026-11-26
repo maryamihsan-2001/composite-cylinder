@@ -47,3 +47,23 @@ to about 7e-8 (16 elements per layer), approaching third-order convergence.
 
 Case: inner radius 50 mm, layup [55/-55/90/55/-55] from inside out,
 5 mm per layer, 50 MPa internal pressure, closed ends.
+## Winding angle study
+Ten alternating +a/-a layers (2.5 mm each), inner radius 50 mm,
+50 MPa internal pressure, closed ends. Angle measured from the axis.
+
+![Winding angle study](angle_study.png)
+
+- **Radial displacement:** inner value falls from about 0.76 mm at 0 deg
+  to a minimum of about 0.08 mm near 68 deg. Fibres increasingly carry
+  hoop load; Poisson coupling helps place the minimum below 90 deg.
+- **Axial strain:** reaches about -0.0023 near 38 deg, where hoop expansion
+  causes strong axial contraction, and rises to about 0.0044 at 90 deg.
+- **Twist:** zero at 0 and 90 deg and small elsewhere, because alternating
+  layers nearly cancel each other.
+- **Hoop stress:** peak rises from 130 MPa at 0 deg to about 241 MPa at
+  90 deg, with more load concentrated near the inner surface.
+- **Matrix-dominated stresses:** transverse and shear stresses are both
+  low (roughly 10 MPa or less) around 55 deg.
+
+No single angle is best for every measure. A strength-based choice needs
+a failure criterion, which is not included.
