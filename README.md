@@ -53,7 +53,7 @@ Three-node quadratic elements in r, with e0 and k as global unknowns.
 
 ![Convergence](convergence.png)
 ## Verification
-All 25 tests pass. With 4 elements per layer:
+All 31 tests pass. With 4 elements per layer:
 
 | Quantity | Analytical | FEM |
 |---|---|---|
@@ -119,8 +119,25 @@ illustrative values, not a matched dataset for the elastic properties.
   (tabulated angles) to the outer layer at 60 deg and above.
 - At 50 MPa, Tsai-Wu predicts first-ply failure for angles below about
   36 deg and above about 80 deg.
-- These are first-ply estimates, not burst pressures. Thermal stresses
-  and progressive damage are ignored.
+- These are first-ply estimates, not burst pressures. This section excludes thermal stress (see below) and progressive damage
+
+  ## Thermal residual stresses
+Uniform cool-down from 180 C to 20 C (dT = -160 K), assumed stress-free
+at 180 C. Run with `python thermal_study.py`.
+
+Assumed expansion coefficients: alpha1 = -0.5e-6 /K,
+alpha2 = alpha3 = 27e-6 /K. Stress is C (strain - alpha dT), which adds
+(beta_r - beta_theta) / (C33 r) to the radial equation, where
+beta = C alpha dT.
+
+![Thermal study](thermal_study.png)
+
+- Cooling alone reaches the Tsai-Wu limit at roughly 36-58 deg.
+- Peak first-ply failure pressure falls from about 209 MPa at 57 deg
+  to about 77 MPa near 59 deg.
+- The effect is small at 0 and 90 deg.
+- Linear elasticity, constant properties and no stress relaxation
+  probably overstate residual stresses. Results are not validated.
 
   ## Rotation checks
 Ply stiffness is checked at 0 and 90 deg and against the textbook
