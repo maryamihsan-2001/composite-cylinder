@@ -1,1 +1,33 @@
-# composite-cylinder
+# Composite thick-walled cylinder
+
+Layered, closed-end composite cylinder under internal/external pressure.
+An analytical solution is compared with a 1D finite element model.
+
+## Model
+- Axisymmetric, generalised plane strain: u(r), axial strain e0, twist k
+- Perfectly bonded, linear elastic, cylindrically orthotropic layers
+- Ply angle measured from the cylinder axis (90 deg = hoop)
+- Away from end effects; no thermal loads or failure prediction
+
+## Analytical solution
+In each layer, radial equilibrium gives
+
+    u'' + u'/r - L^2 u/r^2 = (C12 - C13) e0 / (C33 r) + (C26 - 2 C36) k / C33
+    L^2 = C22 / C33        (1 = axial, 2 = hoop, 3 = radial, 6 = shear)
+
+The closed-form solution is `c1 r^L + c2 r^-L` plus particular terms
+(logarithmic when L = 1 or 2). The constants, e0 and k follow from surface
+pressures, interface continuity, axial force and zero torque. Resultant
+integrals are evaluated by Gauss quadrature.
+
+## FEM
+Three-node quadratic elements in r, with e0 and k as global unknowns.
+
+## Run
+    pip install -r requirements.txt
+    pytest
+    python main.py
+
+## Results
+![Stresses](results/stresses.png)
+![Convergence](results/convergence.png)
